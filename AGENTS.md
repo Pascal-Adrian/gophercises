@@ -94,17 +94,16 @@ move on.
 
 ## Repo layout
 
-Go workspace (`go.work`) with one module per exercise:
+One directory per exercise:
 
 ```
 gophercises/
-├── go.work
 └── quiz-game/          # exercise 1
     ├── main.go
-    ├── problems.csv
-    └── internal/
-        ├── quiz/
-        └── read/
+    └── problems.csv
 ```
 
-New exercises get their own module and a `go.work use` entry.
+An exercise starts as a single `main.go`. Following the
+[Go module layout guide](https://go.dev/doc/modules/layout), a larger one may be
+split across multiple files, all declaring `package main`, and supporting packages,
+if needed, go in an `internal/` directory.
