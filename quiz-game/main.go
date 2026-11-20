@@ -90,6 +90,11 @@ func main() {
 
 	flag.Parse()
 
+	if *timeoutPtr < 1 {
+		fmt.Fprintln(os.Stderr, "-timeout should be at least 1s\n")
+		os.Exit(2)
+	}
+
 	problems, err := getProblems(*pathnamePtr)
 	check(err)
 

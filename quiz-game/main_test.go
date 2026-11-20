@@ -151,7 +151,7 @@ func TestAskTimeout(t *testing.T) {
 				correct, err := ask(bufio.NewReader(pr), testProblems, timeout)
 				elapsed := time.Since(start)
 
-				time.Sleep(time.Minute)
+				time.Sleep(time.Minute) // Ensure that all the routines have finished (>12s), increment if any case needs >1min
 
 				if err != nil && !tc.wantErr {
 					t.Errorf("ask(%v, %v, %v) = %d, %v; want %d, nil", tc.in, testProblems, timeout, correct, err, tc.wantCorrect)
@@ -166,7 +166,7 @@ func TestAskTimeout(t *testing.T) {
 				}
 
 				if elapsed != tc.wantElapsed {
-					t.Errorf("ask(%v, %v, %v) = %v; want %v", tc.in, testProblems, timeout, elapsed, tc.wantElapsed)
+					t.Errorf("ask(%v, %v, %v) in %v; want %v", tc.in, testProblems, timeout, elapsed, tc.wantElapsed)
 				}
 			})
 		})
