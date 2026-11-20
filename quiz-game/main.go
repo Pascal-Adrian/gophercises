@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+var errTimeout = errors.New("Time is up!")
+
 func check(e error) {
 	if e != nil {
 		panic(e)
@@ -70,7 +72,7 @@ func ask(reader *bufio.Reader, problems [][]string, timeout time.Duration) (int,
 
 		select {
 		case <-timeup:
-			return correct, errors.New("Time is up!")
+			return correct, errTimeout
 		case value, _ := <-channel:
 			if checkAnswer(value, row[1]) {
 				correct++
