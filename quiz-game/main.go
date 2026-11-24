@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 )
 
 func check(e error) {
@@ -33,36 +37,57 @@ func getProblems(path string) ([][]string, error) {
 	return rows, nil
 }
 
-func ask(problems [][]string) (int, int) {
-	var answer string
+func ask(reader *bufio.Reader, problems [][]string, timeout time.Duration) (int, error) {
+	timeup := time.After(timeout)
+
+	channel := make(chan string, 1)
+
 	var correct int
 
 	for i, row := range problems {
 		fmt.Printf("%d: %s = ", i, row[0])
 
-		_, err := fmt.Scanf("%s", &answer)
+		go func() {
+			answer, err := reader.ReadString('\n')
+			if err != nil {
+				channel <- ""
+			} else {
+				channel <- answer
+			}
+		}()
 
-		if err != nil {
-			continue
-		}
-
-		if row[1] == answer {
-			correct++
+		select {
+		case <-timeup:
+			return correct, errors.New("Time is up!")
+		case value, _ := <-channel:
+			if row[1] == strings.TrimSpace(value) {
+				correct++
+			}
 		}
 	}
 
-	return correct, len(problems)
+	return correct, nil
 }
 
 func main() {
 	pathnamePtr := flag.String("filepath", "problems.csv", "filepath to the CSV file with the problems")
+	timeoutPtr := flag.Int("timeout", 30, "time, in seconds, to solve the problems")
 
 	flag.Parse()
 
 	problems, err := getProblems(*pathnamePtr)
 	check(err)
 
-	correct, total := ask(problems)
+	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Printf("\nYou answered %d out of %d question(s) correct.\n", correct, total)
+	fmt.Println("Press enter to start!")
+	reader.ReadString('\n')
+
+	correct, err := ask(reader, problems, time.Second*time.Duration(*timeoutPtr))
+
+	if err != nil {
+		fmt.Println("\n\n", err.Error())
+	}
+
+	fmt.Printf("\nYou answered %d out of %d question(s) correct.\n", correct, len(problems))
 }
