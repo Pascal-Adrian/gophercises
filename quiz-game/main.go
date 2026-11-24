@@ -52,6 +52,10 @@ func readToChan(channel chan string, reader *bufio.Reader) {
 	}
 }
 
+func checkAnswer(answer string, expected string) bool {
+	return strings.EqualFold(strings.TrimSpace(answer), strings.TrimSpace(expected))
+}
+
 func ask(reader *bufio.Reader, problems [][]string, timeout time.Duration) (int, error) {
 	timeup := time.After(timeout)
 
@@ -68,7 +72,7 @@ func ask(reader *bufio.Reader, problems [][]string, timeout time.Duration) (int,
 		case <-timeup:
 			return correct, errors.New("Time is up!")
 		case value, _ := <-channel:
-			if strings.EqualFold(strings.TrimSpace(row[1]), strings.TrimSpace(value)) {
+			if checkAnswer(value, row[1]) {
 				correct++
 			}
 		}
