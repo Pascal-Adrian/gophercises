@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"strings"
@@ -38,6 +39,19 @@ func getProblems(path string) ([][]string, error) {
 	return rows, nil
 }
 
+func readToChan(channel chan string, reader *bufio.Reader) {
+	answer, err := reader.ReadString('\n')
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			channel <- answer
+		} else {
+			channel <- ""
+		}
+	} else {
+		channel <- answer
+	}
+}
+
 func ask(reader *bufio.Reader, problems [][]string, timeout time.Duration) (int, error) {
 	timeup := time.After(timeout)
 
@@ -48,14 +62,7 @@ func ask(reader *bufio.Reader, problems [][]string, timeout time.Duration) (int,
 	for i, row := range problems {
 		fmt.Printf("%d: %s = ", i, row[0])
 
-		go func() {
-			answer, err := reader.ReadString('\n')
-			if err != nil {
-				channel <- ""
-			} else {
-				channel <- answer
-			}
-		}()
+		go readToChan(channel, reader)
 
 		select {
 		case <-timeup:
