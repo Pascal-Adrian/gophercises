@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 	"time"
@@ -60,7 +61,7 @@ func ask(reader *bufio.Reader, problems [][]string, timeout time.Duration) (int,
 		case <-timeup:
 			return correct, errors.New("Time is up!")
 		case value, _ := <-channel:
-			if row[1] == strings.TrimSpace(value) {
+			if strings.EqualFold(strings.TrimSpace(row[1]), strings.TrimSpace(value)) {
 				correct++
 			}
 		}
@@ -72,11 +73,20 @@ func ask(reader *bufio.Reader, problems [][]string, timeout time.Duration) (int,
 func main() {
 	pathnamePtr := flag.String("filepath", "problems.csv", "filepath to the CSV file with the problems")
 	timeoutPtr := flag.Int("timeout", 30, "time, in seconds, to solve the problems")
+	shufflePtr := flag.Bool("shuffle", false, "if the problems are shuffled before start or not")
 
 	flag.Parse()
 
 	problems, err := getProblems(*pathnamePtr)
 	check(err)
+
+	total := len(problems)
+
+	if *shufflePtr {
+		rand.Shuffle(total, func(i, j int) {
+			problems[i], problems[j] = problems[j], problems[i]
+		})
+	}
 
 	reader := bufio.NewReader(os.Stdin)
 
@@ -89,5 +99,5 @@ func main() {
 		fmt.Println("\n\n", err.Error())
 	}
 
-	fmt.Printf("\nYou answered %d out of %d question(s) correct.\n", correct, len(problems))
+	fmt.Printf("\nYou answered %d out of %d question(s) correct.\n", correct, total)
 }
