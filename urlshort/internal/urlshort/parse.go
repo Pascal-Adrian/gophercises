@@ -1,16 +1,16 @@
 package urlshort
 
-import "go.yaml.in/yaml/v4"
-
 type pair struct {
-	Path string `yaml:"path"`
-	URL  string `yaml:"url"`
+	Path string `json:"path" yaml:"path"`
+	URL  string `json:"url" yaml:"url"`
 }
 
-func parseYaml(yml []byte) (map[string]string, error) {
-	var yamlMap []pair
+type unmarshalFunction func(in []byte, out any) (err error)
 
-	err := yaml.Unmarshal(yml, &yamlMap)
+func parse(in []byte, unmarshalFunc unmarshalFunction) (map[string]string, error) {
+	var pairs []pair
+
+	err := unmarshalFunc(in, &pairs)
 
 	if err != nil {
 		return nil, err
@@ -18,7 +18,7 @@ func parseYaml(yml []byte) (map[string]string, error) {
 
 	pathsToUrls := make(map[string]string)
 
-	for _, v := range yamlMap {
+	for _, v := range pairs {
 		pathsToUrls[v.Path] = v.URL
 	}
 

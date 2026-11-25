@@ -1,8 +1,11 @@
 package urlshort
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"go.yaml.in/yaml/v4"
 )
 
 // MapHandler will return an http.HandlerFunc (which also
@@ -28,24 +31,50 @@ func MapHandler(pathsToUrls map[string]string, fallback http.Handler) http.Handl
 	}
 }
 
-// YAMLHandler will parse the provided YAML and then return
-// an http.HandlerFunc (which also implements http.Handler)
-// that will attempt to map any paths to their corresponding
-// URL. If the path is not provided in the YAML, then the
-// fallback http.Handler will be called instead.
+// StructuredHandler is the signature shared by handlers that
+// build their path-to-URL mapping from structured data (such
+// as YAML or JSON). It parses in and returns an
+// http.HandlerFunc (which also implements http.Handler) that
+// will attempt to map any paths to their corresponding URL.
+// If the path is not present in the data, then the fallback
+// http.Handler will be called instead.
 //
-// YAML is expected to be in the format:
+// The data is expected to be a list of entries, each with a
+// "path" and a "url" field.
 //
-//   - path: /some-path
-//     url: https://www.some-url.com/demo
-//
-// The only errors that can be returned all related to having
-// invalid YAML data.
+// The only errors that can be returned are all related to
+// having invalid data for the given format.
 //
 // See MapHandler to create a similar http.HandlerFunc via
 // a mapping of paths to urls.
-func YAMLHandler(yml []byte, fallback http.Handler) (http.HandlerFunc, error) {
-	pathsToUrls, err := parseYaml(yml)
+type StructuredHandler func(in []byte, fallback http.Handler) (http.HandlerFunc, error)
+
+// YAMLHandler is a [StructuredHandler] for YAML data.
+//
+// YAML is expected to be in the format:
+//
+//	---
+//	- path: /some-path
+//	  url: https://www.some-url.com/demo
+func YAMLHandler(in []byte, fallback http.Handler) (http.HandlerFunc, error) {
+	pathsToUrls, err := parse(in, yaml.Unmarshal)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return MapHandler(pathsToUrls, fallback), nil
+}
+
+// JSONHandler is a [StructuredHandler] for JSON data.
+//
+// JSON is expected to be in the format:
+//
+//	[
+//	  {"path": "/some-path", "url": "https://www.some-url.com/demo"}
+//	]
+func JSONHandler(in []byte, fallback http.Handler) (http.HandlerFunc, error) {
+	pathsToUrls, err := parse(in, json.Unmarshal)
 
 	if err != nil {
 		return nil, err

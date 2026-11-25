@@ -1,36 +1,65 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Pascal-Adrian/gophercises/urlshort/internal/urlshort"
 )
 
+func exitWithError(message string, code int) {
+	fmt.Fprintln(os.Stderr, message)
+	os.Exit(code)
+}
+
 func main() {
+	pathname := flag.String("filepath", "paths.yaml", "filepath to the YAML/JSON file with the paths")
+
+	flag.Parse()
+
+	fileType := strings.ToLower(filepath.Ext(*pathname))
+
+	var handlerFunc urlshort.StructuredHandler
+
+	switch fileType {
+	case ".json":
+		handlerFunc = urlshort.JSONHandler
+	case ".yml", ".yaml":
+		handlerFunc = urlshort.YAMLHandler
+	default:
+		exitWithError("Unsupported file type", 2)
+	}
+
+	data, err := os.ReadFile(*pathname)
+
+	if err != nil {
+		exitWithError(err.Error(), 1)
+	}
+
 	mux := defaultMux()
 
-	// Build the MapHandler using the mux as the fallback
 	pathsToUrls := map[string]string{
 		"/urlshort-godoc": "https://godoc.org/github.com/gophercises/urlshort",
 		"/yaml-godoc":     "https://godoc.org/gopkg.in/yaml.v2",
 	}
 	mapHandler := urlshort.MapHandler(pathsToUrls, mux)
 
-	// Build the YAMLHandler using the mapHandler as the
-	// fallback
-	yaml := `
-- path: /urlshort
-  url: https://github.com/gophercises/urlshort
-- path: /urlshort-final
-  url: https://github.com/gophercises/urlshort/tree/solution
-`
-	yamlHandler, err := urlshort.YAMLHandler([]byte(yaml), mapHandler)
+	handler, err := handlerFunc(data, mapHandler)
+
 	if err != nil {
-		panic(err)
+		exitWithError(err.Error(), 1)
 	}
+
 	fmt.Println("Starting the server on :8080")
-	http.ListenAndServe(":8080", yamlHandler)
+	err = http.ListenAndServe(":8080", handler)
+
+	if err != nil {
+		exitWithError(err.Error(), 1)
+	}
 }
 
 func defaultMux() *http.ServeMux {
