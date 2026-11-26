@@ -7,7 +7,7 @@ type pair struct {
 
 type unmarshalFunction func(in []byte, out any) (err error)
 
-func parse(in []byte, unmarshalFunc unmarshalFunction) (map[string]string, error) {
+func parseStructured(in []byte, unmarshalFunc unmarshalFunction) (map[string]string, error) {
 	var pairs []pair
 
 	err := unmarshalFunc(in, &pairs)

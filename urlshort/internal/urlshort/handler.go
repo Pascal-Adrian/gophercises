@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Pascal-Adrian/gophercises/urlshort/internal/database"
 	"go.yaml.in/yaml/v4"
 )
 
@@ -57,7 +58,7 @@ type StructuredHandler func(in []byte, fallback http.Handler) (http.HandlerFunc,
 //	- path: /some-path
 //	  url: https://www.some-url.com/demo
 func YAMLHandler(in []byte, fallback http.Handler) (http.HandlerFunc, error) {
-	pathsToUrls, err := parse(in, yaml.Unmarshal)
+	pathsToUrls, err := parseStructured(in, yaml.Unmarshal)
 
 	if err != nil {
 		return nil, err
@@ -74,11 +75,28 @@ func YAMLHandler(in []byte, fallback http.Handler) (http.HandlerFunc, error) {
 //	  {"path": "/some-path", "url": "https://www.some-url.com/demo"}
 //	]
 func JSONHandler(in []byte, fallback http.Handler) (http.HandlerFunc, error) {
-	pathsToUrls, err := parse(in, json.Unmarshal)
+	pathsToUrls, err := parseStructured(in, json.Unmarshal)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return MapHandler(pathsToUrls, fallback), nil
+}
+
+func DBHandler(db *database.Queries, fallback http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		url := r.URL.Path
+
+		path, err := db.GetPathByPath(r.Context(), url)
+
+		if err != nil {
+			fmt.Printf("Get: %s\n", url)
+			fallback.ServeHTTP(w, r)
+			return
+		}
+
+		fmt.Printf("Redirect: %s -> %s\n", url, path.Url)
+		http.Redirect(w, r, path.Url, http.StatusFound)
+	}
 }
